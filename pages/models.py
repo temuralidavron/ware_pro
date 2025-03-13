@@ -65,3 +65,7 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.product.name} ({self.transaction_type})"
+
+
+class Proba(models.Model):
+    name = models.CharField(max_length=50)
