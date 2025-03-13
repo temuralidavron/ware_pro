@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Oylik Ombor Hisoboti{% endblock %}
+
+{% block content %}
+<h2 class="text-center my-4">Oylik Ombor Hisoboti</h2>
+
+<!-- Oy tanlash formasi -->
+<form method="GET" class="text-center mb-3">
+    <label for="month"><b>Oyni tanlang:</b></label>
+    <select name="month" id="month" class="form-select d-inline w-auto" onchange="this.form.submit()">
+        {% for m in months %}
+            <option value="{{ m|date:'Y-m' }}" {% if m|date:'Y-m' == selected_month %}selected{% endif %}>
+                {{ m|date:'F Y' }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+<!-- Ombordagi mahsulotlar ro‘yxati -->
+<table class="table table-bordered text-center">
+    <thead class="bg-primary text-white">
+        <tr>
+            <th>#</th>
+            <th>Mahsulot</th>
+            <th>Miqdor</th>
+            <th>O‘lchov</th>
+            <th>Jami Summa</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in warehouse_data %}
+        <tr class="{% cycle 'table-light' 'table-secondary' %}">
+            <td>{{ forloop.counter }}</td>
+            <td>{{ product.product__name }}</td>
+            <td>{{ product.total_quantity }}</td>
+            <td>{{ product.product__unit }}</td>
+            <td>{{ product.total_sum }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Umumiy hisob -->
+<h4 class="text-end mt-3">Ombordagi umumiy qiymat: <b>{{ total_value }}</b> so‘m</h4>
+
+{% endblock %}

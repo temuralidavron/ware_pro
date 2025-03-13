@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    env_file:
+      - .env
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/Warehouse
+      - static_volume:/Warehouse/staticfiles
+      - media_volume:/Warehouse/mediafiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      - warehouse_db
+#      - redis
+    restart: always
+
+  warehouse_db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: warehouse
+      POSTGRES_USER: user_warehouse
+      POSTGRES_PASSWORD: password_warehouse
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+
+#  redis:
+#    image: redis:alpine
+#    ports:
+#      - "6371:6379"
+#    volumes:
+#      - redis_data:/data
+#    restart: always
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
+#  redis_data:

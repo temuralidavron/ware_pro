@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Mahsulotlar Ro'yxati{% endblock %}
+
+{% block content %}
+<h2 class="text-center my-4">📦 Barcha Mahsulotlar</h2>
+
+<table class="table table-bordered text-center shadow">
+    <thead class="bg-primary text-white">
+        <tr>
+            <th>#</th>
+            <th>📌 Nomi</th>
+            <th>📊 Miqdori</th>
+            <th>💰 Narxi</th>
+            <th>📏 O‘lchov</th>
+            <th>💵 Jami summa</th>
+            <th>⏳ Yaratilgan vaqti</th>
+            <th>✏️ Yangilash</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for product in page_obj %}
+        <tr class="{% cycle 'table-light' 'table-secondary' %}">
+            <td>{{ forloop.counter }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.quantity }}</td>
+            <td>{{ product.price }}</td>
+            <td>{{ product.unit }}</td>
+            <td><b>{{ product.total_price|floatformat:2 }}</b></td>  {# 🔥 Jami summa backenddan kelmoqda #}
+            <td>{{ product.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+                <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">✏️ Yangilash</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8" class="text-center text-danger">Mahsulot topilmadi</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Jami qiymatlar -->
+<div class="alert alert-info text-end">
+    <strong>📊 Umumiy miqdor: </strong> <b>{{ total_quantity }}</b>
+</div>
+
+<div class="alert alert-success text-end">
+    <strong>💰 Umumiy summa: </strong> <b>{{ total_price_sum|floatformat:2 }}</b> so'm
+</div>
+
+<!-- Sahifalash (Pagination) -->
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">⏪ Birinchi</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">⬅️ Oldingi</a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">Sahifa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Keyingi ➡️</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Oxirgi ⏩</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+{% endblock %}

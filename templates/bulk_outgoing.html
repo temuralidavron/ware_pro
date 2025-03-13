@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="text-center">Umumiy Chiqim</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+        <label for="recipient">Kimga chiqarildi:</label>
+        {{ form.recipient }}
+    </div>
+
+    <div class="mb-3">
+        <label>Chiqim qilinadigan mahsulotlar:</label>
+        <div id="product-list">
+            {% for product in form.products.field.queryset %}
+            <div class="product-item">
+                <input type="checkbox" name="products" value="{{ product.id }}" id="product_{{ product.id }}"
+                       onchange="toggleQuantity({{ product.id }}, {{ product.quantity }})">
+
+                <label for="product_{{ product.id }}" class="product-label">{{ product.name }}</label>
+
+                <!-- Ombordagi mavjud miqdor -->
+                <span class="stock-info">Omborda: <strong>{{ product.quantity }}</strong></span>
+
+                <!-- Foydalanuvchi kiritadigan miqdor -->
+                <input type="number" name="quantity_{{ product.id }}" id="quantity_{{ product.id }}"
+                       class="form-control quantity-input" placeholder="Miqdor" min="1" max="{{ product.quantity }}"
+                       style="display: none;">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <button type="button" class="btn btn-secondary" onclick="goBack()">⬅️ Ortga</button>
+        <button type="submit" class="btn btn-primary">Yuborish ✅</button>
+    </div>
+</form>
+
+<script>
+    function toggleQuantity(productId, stockQuantity) {
+        let checkbox = document.getElementById("product_" + productId);
+        let quantityInput = document.getElementById("quantity_" + productId);
+
+        if (checkbox.checked) {
+            quantityInput.style.display = "block";
+            quantityInput.setAttribute("required", "required");
+            quantityInput.setAttribute("max", stockQuantity);  // Omborda bor miqdordan oshirib bo‘lmaydi
+        } else {
+            quantityInput.style.display = "none";
+            quantityInput.removeAttribute("required");
+            quantityInput.value = "";
+        }
+    }
+
+    function goBack() {
+        window.history.back();
+    }
+</script>
+
+<style>
+    .product-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+    }
+
+    .product-label {
+        flex-grow: 1;
+        margin-left: 10px;
+    }
+
+    .stock-info {
+        font-size: 14px;
+        color: #555;
+        margin-right: 15px;
+    }
+
+    .quantity-input {
+        width: 120px;
+        padding: 8px;
+        font-size: 16px;
+        border-radius: 5px;
+    }
+</style>
+
+{% endblock %}

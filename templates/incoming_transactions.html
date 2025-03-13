@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}📥 Barcha Kirimlar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">📥 Barcha Kirimlar</h2>
+
+    <a href="#" class="btn btn-success mb-3">
+        📊 Excel yuklab olish
+    </a>
+
+    <table class="table table-bordered text-center shadow">
+        <thead class="table-primary text-white">
+            <tr>
+                <th>#</th>
+                <th>📌 Mahsulot</th>
+                <th>📊 Miqdor</th>
+                <th>💰 Jami Narx</th>
+                <th>🙍‍♂️ Kimga</th>
+                <th>⏳ Sana</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaction in incoming_transactions %}
+            <tr class="{% cycle 'table-light' 'table-secondary' %}">
+                <td>{{ forloop.counter }}</td>
+                <td>{{ transaction.product.name }}</td>
+                <td>{{ transaction.quantity }} {{ transaction.product.unit }}</td>
+                <td><b>{{ transaction.total_price|floatformat:2 }}</b></td>  {# 🔥 Faqat `total_price` ni chaqirdik #}
+                <td>{{ transaction.person }}</td>
+                <td>{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">❌ Kirim mavjud emas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="alert alert-primary text-end">
+        <strong>📊 Umumiy Kirim: </strong> <b>{{ total_incoming|floatformat:2 }}</b> so'm
+    </div>
+</div>
+{% endblock %}

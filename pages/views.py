@@ -1,0 +1,322 @@
+
+from .forms import ProductForm, TransactionForm
+from django.shortcuts import render, get_object_or_404, redirect
+from .forms import UpdateProductForm
+from django.contrib import messages
+from .models import Product, Transaction
+from .forms import BulkOutgoingForm
+from django.shortcuts import render, redirect
+from .models import Product
+from .forms import ProductForm
+
+def dashboard(request):
+    total_products = Product.objects.count()
+    total_incoming = Transaction.objects.filter(transaction_type='incoming').count()
+    total_outgoing = Transaction.objects.filter(transaction_type='outgoing').count()
+
+    context = {
+        'total_products': total_products,
+        'total_incoming': total_incoming,
+        'total_outgoing': total_outgoing,
+    }
+    return render(request, 'dashboard.html', context)
+
+
+
+
+# Mahsulot qo‘shish
+
+
+def create_product(request):
+    if request.method == "POST":
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            form.save()  # ✅ ModelForm bo‘lsa, save() orqali avtomatik saqlanadi
+            return redirect('dashboard')
+    else:
+        form = ProductForm()
+
+    return render(request, 'product_form.html', {'form': form})
+
+
+# Kirim yoki chiqim qo‘shish
+def create_transaction(request):
+    if request.method == "POST":
+        form = TransactionForm(request.POST)
+        if form.is_valid():
+            product = form.cleaned_data['product']
+            transaction_type = form.cleaned_data['transaction_type']
+            quantity = form.cleaned_data['quantity']
+            person = form.cleaned_data['person']
+
+            if transaction_type == "outgoing":
+                product.quantity -= quantity
+            else:
+                product.quantity += quantity
+
+            product.save()
+            Transaction.objects.create(
+                product=product,
+                transaction_type=transaction_type,
+                quantity=quantity,
+                person=person
+            )
+
+            return redirect('dashboard')
+    else:
+        form = TransactionForm()
+
+    return render(request, 'transaction_form.html', {'form': form})
+
+
+from django.core.paginator import Paginator
+from django.shortcuts import render
+from .models import Product
+
+def product_list(request):
+    products = Product.objects.all().order_by('-created_at')  # Eng oxirgi qo‘shilgan mahsulotlar birinchi chiqadi
+
+    # Sahifalash (Pagination)
+    paginator = Paginator(products, 10)  # Har bir sahifada 10 ta mahsulot bo‘ladi
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Har bir mahsulot uchun jami narxni hisoblash
+    for product in page_obj:
+        product.total_price = product.quantity * product.price
+
+    # Faqat shu sahifadagi mahsulotlar uchun umumiy qiymatlarni hisoblash
+    total_quantity = sum(product.quantity for product in page_obj)
+    total_price_sum = sum(product.total_price for product in page_obj)
+
+    context = {
+        'page_obj': page_obj,  # Sahifalangan obyektlar
+        'total_quantity': total_quantity,  # Jami soni
+        'total_price_sum': total_price_sum,  # Umumiy jami summa
+    }
+
+    return render(request, 'product_list.html', context)
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Product, Transaction
+from .forms import UpdateProductForm
+
+
+def update_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    if request.method == "POST":
+        form = UpdateProductForm(request.POST, instance=product)
+        if form.is_valid():
+            additional_quantity = form.cleaned_data['additional_quantity']
+
+            # Mahsulotni yangilash
+            product.quantity += additional_quantity
+            product.price = form.cleaned_data['price']  # Narxni yangilash
+            product.supplier = form.cleaned_data['supplier']  # Yetkazib beruvchini yangilash
+            product.contract_number = form.cleaned_data['contract_number']  # Shartnoma raqamini yangilash
+            product.save()
+
+            # Tranzaksiya qo'shish
+            Transaction.objects.create(
+                product=product,
+                transaction_type='incoming',
+                quantity=additional_quantity,
+                person=product.supplier
+            )
+
+            return redirect('dashboard')
+    else:
+        form = UpdateProductForm(instance=product)
+
+    return render(request, 'update_product.html', {'form': form, 'product': product})
+
+
+def bulk_outgoing(request):
+    if request.method == "POST":
+        form = BulkOutgoingForm(request.POST)
+        if form.is_valid():
+            products = request.POST.getlist('products')  # Checkboxda tanlangan mahsulotlar
+            recipient = form.cleaned_data['recipient']
+            quantities = {}
+
+            for product_id in products:
+                quantity_key = f'quantity_{product_id}'
+                quantity_value = request.POST.get(quantity_key)
+
+                if quantity_value:
+                    try:
+                        quantity = int(quantity_value)
+                        if quantity > 0:
+                            quantities[int(product_id)] = quantity
+                        else:
+                            form.add_error(None, "Miqdor 0 dan katta bo‘lishi kerak!")
+                    except ValueError:
+                        form.add_error(None, "Miqdor noto‘g‘ri formatda!")
+
+            if len(products) != len(quantities):
+                form.add_error(None, "Har bir mahsulot uchun miqdor kiritilishi shart!")
+            else:
+                for product_id, quantity in quantities.items():
+                    product = Product.objects.get(id=product_id)
+                    if product.quantity < quantity:
+                        form.add_error(None, f"{product.name} uchun omborda yetarli mahsulot yo‘q!")
+                        break
+
+                if not form.errors:
+                    for product_id, quantity in quantities.items():
+                        product = Product.objects.get(id=product_id)
+                        product.quantity -= quantity
+                        product.save()
+
+                        Transaction.objects.create(
+                            product=product,
+                            transaction_type='outgoing',
+                            quantity=quantity,
+                            person=recipient
+                        )
+
+                    messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
+                    return redirect('dashboard')
+
+    else:
+        form = BulkOutgoingForm()
+
+    return render(request, 'bulk_outgoing.html', {'form': form})
+
+def outgoing_list(request):
+    incoming_transactions = Transaction.objects.filter(transaction_type='outgoing')
+
+    # Har bir mahsulot uchun jami narxni hisoblash
+    for transaction in incoming_transactions:
+        transaction.total_price = transaction.quantity * transaction.product.price
+
+    # Umumiy kirim summasini hisoblash
+    total_incoming = sum(transaction.total_price for transaction in incoming_transactions)
+
+    context = {
+        'incoming_transactions': incoming_transactions,
+        'total_incoming': total_incoming,
+    }
+    return render(request, 'outgoing_list.html', context)
+
+
+
+def incoming_transactions_list(request):
+    incoming_transactions = Transaction.objects.filter(transaction_type='incoming')
+
+    # Har bir mahsulot uchun jami narxni hisoblash
+    for transaction in incoming_transactions:
+        transaction.total_price = transaction.quantity * transaction.product.price
+
+    # Umumiy kirim summasini hisoblash
+    total_incoming = sum(transaction.total_price for transaction in incoming_transactions)
+
+    context = {
+        'incoming_transactions': incoming_transactions,
+        'total_incoming': total_incoming,
+    }
+    return render(request, 'incoming_transactions.html', context)
+
+
+import openpyxl
+from django.http import HttpResponse
+from .models import Transaction
+
+def export_outgoing_to_excel(request):
+    # Yangi Excel fayl yaratamiz
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Chiqimlar"
+
+    # Ustun sarlavhalari
+    headers = ["#", "Mahsulot", "Miqdor", "Kimga", "Sana"]
+    ws.append(headers)
+
+    # Chiqimlarni olish
+    outgoing_transactions = Transaction.objects.filter(transaction_type='outgoing')
+
+    for index, transaction in enumerate(outgoing_transactions, start=1):
+        ws.append([
+            index,
+            transaction.product.name,
+            f"{transaction.quantity} {transaction.product.unit}",
+            transaction.person,
+            # transaction.created_at.strftime("%Y-%m-%d %H:%M") if transaction.created_at else "",
+        ])
+
+    # Javob qaytarish
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="chiqimlar.xlsx"'
+
+    wb.save(response)
+    return response
+
+
+
+from django.shortcuts import render
+from django.db.models import Sum
+from django.utils.timezone import now
+from datetime import datetime
+from .models import Product, Transaction
+
+def warehouse_report(request):
+    # Foydalanuvchi tanlagan oy (URL query orqali)
+    month = request.GET.get('month', now().strftime('%Y-%m'))  # Default: joriy oy
+
+    # Tanlangan oy bo‘yicha filter
+    start_date = datetime.strptime(month, "%Y-%m")
+    end_date = datetime(start_date.year, start_date.month + 1, 1) if start_date.month < 12 else datetime(start_date.year + 1, 1, 1)
+
+    # O‘sha oyda omborda bo‘lgan mahsulotlar
+    transactions = Transaction.objects.filter(created_at__gte=start_date, created_at__lt=end_date)
+
+    # Mahsulotlar bo‘yicha umumiy miqdor va jami summa
+    warehouse_data = transactions.values('product__name', 'product__unit').annotate(
+        total_quantity=Sum('quantity'),
+        total_sum=Sum('total_sum')
+    )
+
+    # Ombordagi umumiy qiymat
+    total_value = transactions.aggregate(Sum('total_sum'))['total_sum__sum'] or 0
+
+    # Mavjud oylar ro‘yxati
+    months = Transaction.objects.dates('created_at', 'month', order='DESC')
+
+    context = {
+        'warehouse_data': warehouse_data,
+        'total_value': total_value,
+        'months': months,
+        'selected_month': month
+    }
+
+    return render(request, 'warehouse_report.html', context)
+
+
+import json
+from django.shortcuts import render
+from .models import Product
+
+import json
+from django.shortcuts import render
+from .models import Product
+
+def dashboard_view(request):
+    products = Product.objects.all()
+
+    # Statistik ma'lumotlarni yig‘ish
+    labels = [product.name for product in products]
+    data = [product.quantity for product in products]
+
+    context = {
+        'total_products': products.count(),
+        'total_incoming': 12,  # Bu qiymatni kerakli joydan oling
+        'total_outgoing': 10,   # Bu qiymatni kerakli joydan oling
+        'labels': json.dumps(labels),
+        'data': json.dumps(data),
+    }
+
+    return render(request, 'dashboard.html', context)

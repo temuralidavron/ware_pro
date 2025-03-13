@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8 col-sm-10">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h4 class="mb-0">📦 Mahsulot Qo‘shish</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in field.errors %}
+                                    <small>⚠ {{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <!-- Tugmalar -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success py-2 fw-bold">✅ Saqlash</button>
+                            <a href="{% url 'product_list' %}" class="btn btn-secondary py-2 fw-bold">🔙 Ortga</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stilni yaxshilash -->
+<style>
+    input, select, textarea {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+    }
+    .card {
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}
