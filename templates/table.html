@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+             background-image: url("{% static 'image/image.jpg' %}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen bg-gray-900 bg-opacity-50">
+    <div class="text-center bg-white bg-opacity-75 p-10 rounded-lg shadow-lg">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Depo</h1>
+        {% if user_authenticated %}
+            <a href="{% url 'dashboard' %}">
+                <button class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700">
+                    Admin Panel
+                </button>
+            </a>
+        {% else %}
+            <a href="{% url 'login' %}">
+                <button class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
+                    Kirish
+                </button>
+            </a>
+        {% endif %}
+    </div>
+</body>
+</html>

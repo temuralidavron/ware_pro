@@ -8,6 +8,61 @@ from .forms import BulkOutgoingForm
 from django.shortcuts import render, redirect
 from .models import Product
 from .forms import ProductForm
+from django.contrib.auth import authenticate, login, logout
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import User
+from django.contrib import messages
+
+def custom_404(request, exception=None):
+    return render(request, '404.html', status=404)
+
+from django.contrib.auth.decorators import login_required
+
+def homeing(request):
+    return render(request, 'table.html', {'user_authenticated': request.user.is_authenticated})
+
+
+# Ro‘yxatdan o‘tish funksiyasi
+def user_register(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Bu foydalanuvchi allaqachon mavjud!")
+            return redirect("register")
+
+        user = User.objects.create_user(username=username, password=password)
+        messages.success(request, "Ro‘yxatdan o‘tish muvaffaqiyatli yakunlandi. Endi tizimga kiring.")
+        return redirect("login")
+
+    return render(request, "signup.html")
+
+
+# Login funksiyasi
+def user_login(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect("dashboard")  # Bosh sahifaga yo‘naltiramiz
+        else:
+            messages.error(request, "Login yoki parol xato!")
+            return redirect("login")
+
+    return render(request, "login.html")
+
+
+def user_logout(request):
+    logout(request)
+    return redirect("login")
+
+
+
 
 def dashboard(request):
     total_products = Product.objects.count()
@@ -26,18 +81,32 @@ def dashboard(request):
 
 # Mahsulot qo‘shish
 
+#
+# def create_product(request):
+#     if request.method == "POST":
+#         form = ProductForm(request.POST)
+#         if form.is_valid():
+#             form.save()  # ✅ ModelForm bo‘lsa, save() orqali avtomatik saqlanadi
+#             return redirect('dashboard')
+#     else:
+#         form = ProductForm()
+#
+#     return render(request, 'product_form.html', {'form': form})
 
 def create_product(request):
+    """ Yangi mahsulot yaratish """
     if request.method == "POST":
         form = ProductForm(request.POST)
         if form.is_valid():
-            form.save()  # ✅ ModelForm bo‘lsa, save() orqali avtomatik saqlanadi
+            product = form.save(commit=False)  # Save qilishni kechiktiramiz
+            product.total_price = product.quantity * product.price  # ✅ to‘g‘ri hisoblash
+            product.save()  # Endi saqlaymiz
+
             return redirect('dashboard')
     else:
         form = ProductForm()
 
     return render(request, 'product_form.html', {'form': form})
-
 
 # Kirim yoki chiqim qo‘shish
 def create_transaction(request):
@@ -73,6 +142,30 @@ from django.core.paginator import Paginator
 from django.shortcuts import render
 from .models import Product
 
+# def product_list(request):
+#     products = Product.objects.all().order_by('-created_at')  # Eng oxirgi qo‘shilgan mahsulotlar birinchi chiqadi
+#
+#     # Sahifalash (Pagination)
+#     paginator = Paginator(products, 10)  # Har bir sahifada 10 ta mahsulot bo‘ladi
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+#
+#     # Har bir mahsulot uchun jami narxni hisoblash
+#     for product in page_obj:
+#         product.total_price = product.quantity * product.price
+#
+#     # Faqat shu sahifadagi mahsulotlar uchun umumiy qiymatlarni hisoblash
+#     total_quantity = sum(product.quantity for product in page_obj)
+#     total_price_sum = sum(product.total_price for product in page_obj)
+#
+#     context = {
+#         'page_obj': page_obj,  # Sahifalangan obyektlar
+#         'total_quantity': total_quantity,  # Jami soni
+#         'total_price_sum': total_price_sum,  # Umumiy jami summa
+#     }
+#
+#     return render(request, 'product_list.html', context)
+#
 def product_list(request):
     products = Product.objects.all().order_by('-created_at')  # Eng oxirgi qo‘shilgan mahsulotlar birinchi chiqadi
 
@@ -81,13 +174,9 @@ def product_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Har bir mahsulot uchun jami narxni hisoblash
-    for product in page_obj:
-        product.total_price = product.quantity * product.price
-
     # Faqat shu sahifadagi mahsulotlar uchun umumiy qiymatlarni hisoblash
     total_quantity = sum(product.quantity for product in page_obj)
-    total_price_sum = sum(product.total_price for product in page_obj)
+    total_price_sum = sum(product.total_price or 0 for product in page_obj)  # `None` bo‘lsa, 0 qo‘shiladi
 
     context = {
         'page_obj': page_obj,  # Sahifalangan obyektlar
@@ -97,33 +186,78 @@ def product_list(request):
 
     return render(request, 'product_list.html', context)
 
-
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Product, Transaction
 from .forms import UpdateProductForm
 
 
+# def update_product(request, product_id):
+#     product = get_object_or_404(Product, id=product_id)
+#
+#     if request.method == "POST":
+#         form = UpdateProductForm(request.POST, instance=product)
+#         if form.is_valid():
+#             additional_quantity = form.cleaned_data['additional_quantity']
+#
+#             # Mahsulotni yangilash
+#             product.quantity += additional_quantity
+#             product.price = form.cleaned_data['price']  # Narxni yangilash
+#             product.supplier = form.cleaned_data['supplier']  # Yetkazib beruvchini yangilash
+#             product.contract_number = form.cleaned_data['contract_number']  # Shartnoma raqamini yangilash
+#             product.save()
+#
+#             # Tranzaksiya qo'shish
+#             Transaction.objects.create(
+#                 product=product,
+#                 transaction_type='incoming',
+#                 quantity=additional_quantity,
+#                 person=product.supplier
+#             )
+#
+#             return redirect('dashboard')
+#     else:
+#         form = UpdateProductForm(instance=product)
+#
+#     return render(request, 'update_product.html', {'form': form, 'product': product})
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import Product, Transaction
+from .forms import UpdateProductForm  # Formani loyihaga mos ravishda o‘zgartiring
+
 def update_product(request, product_id):
+    """ Mahsulot miqdorini va narxini yangilash """
     product = get_object_or_404(Product, id=product_id)
 
     if request.method == "POST":
         form = UpdateProductForm(request.POST, instance=product)
         if form.is_valid():
-            additional_quantity = form.cleaned_data['additional_quantity']
+            additional_quantity = form.cleaned_data['additional_quantity']  # ✅ Qo‘shilayotgan miqdor
+            new_price = form.cleaned_data['price']  # ✅ Yangilanayotgan narx
 
-            # Mahsulotni yangilash
-            product.quantity += additional_quantity
-            product.price = form.cleaned_data['price']  # Narxni yangilash
-            product.supplier = form.cleaned_data['supplier']  # Yetkazib beruvchini yangilash
-            product.contract_number = form.cleaned_data['contract_number']  # Shartnoma raqamini yangilash
+            # **Eski jami narxni olish**
+            old_total_price = product.total_price if product.total_price else 0  # Agar oldin None bo‘lsa, 0 ga almashtiramiz
+
+            # **Yangi qo‘shilayotgan mahsulot summasi**
+            new_total_sum = additional_quantity * new_price
+
+            # **Yangi jami narxni hisoblash**
+            new_total_price = old_total_price + new_total_sum
+
+            # **Mahsulotni yangilash**
+            product.quantity += additional_quantity  # ✅ Umumiy miqdor oshadi
+            product.price = new_price  # ✅ Narx yangilanadi
+            product.total_price = new_total_price  # ✅ Yangi jami narx
+            product.supplier = form.cleaned_data['supplier']
+            product.contract_number = form.cleaned_data['contract_number']
             product.save()
 
-            # Tranzaksiya qo'shish
+            # ✅ **Yangi tranzaksiya qo‘shish (faqat qo‘shilgan miqdor)**
             Transaction.objects.create(
                 product=product,
                 transaction_type='incoming',
-                quantity=additional_quantity,
-                person=product.supplier
+                quantity=additional_quantity,  # ✅ Faqat qo‘shilgan miqdor
+                person=product.supplier,
+                contract_number=product.contract_number,
+                total_sum=new_total_sum  # ✅ Yangi qo‘shilgan mahsulot qiymati hisoblanadi
             )
 
             return redirect('dashboard')
@@ -132,7 +266,57 @@ def update_product(request, product_id):
 
     return render(request, 'update_product.html', {'form': form, 'product': product})
 
-
+# def bulk_outgoing(request):
+#     if request.method == "POST":
+#         form = BulkOutgoingForm(request.POST)
+#         if form.is_valid():
+#             products = request.POST.getlist('products')  # Checkboxda tanlangan mahsulotlar
+#             recipient = form.cleaned_data['recipient']
+#             quantities = {}
+#
+#             for product_id in products:
+#                 quantity_key = f'quantity_{product_id}'
+#                 quantity_value = request.POST.get(quantity_key)
+#
+#                 if quantity_value:
+#                     try:
+#                         quantity = int(quantity_value)
+#                         if quantity > 0:
+#                             quantities[int(product_id)] = quantity
+#                         else:
+#                             form.add_error(None, "Miqdor 0 dan katta bo‘lishi kerak!")
+#                     except ValueError:
+#                         form.add_error(None, "Miqdor noto‘g‘ri formatda!")
+#
+#             if len(products) != len(quantities):
+#                 form.add_error(None, "Har bir mahsulot uchun miqdor kiritilishi shart!")
+#             else:
+#                 for product_id, quantity in quantities.items():
+#                     product = Product.objects.get(id=product_id)
+#                     if product.quantity < quantity:
+#                         form.add_error(None, f"{product.name} uchun omborda yetarli mahsulot yo‘q!")
+#                         break
+#
+#                 if not form.errors:
+#                     for product_id, quantity in quantities.items():
+#                         product = Product.objects.get(id=product_id)
+#                         product.quantity -= quantity
+#                         product.save()
+#
+#                         Transaction.objects.create(
+#                             product=product,
+#                             transaction_type='outgoing',
+#                             quantity=quantity,
+#                             person=recipient
+#                         )
+#
+#                     messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
+#                     return redirect('dashboard')
+#
+#     else:
+#         form = BulkOutgoingForm()
+#
+#     return render(request, 'bulk_outgoing.html', {'form': form})
 def bulk_outgoing(request):
     if request.method == "POST":
         form = BulkOutgoingForm(request.POST)
@@ -140,23 +324,28 @@ def bulk_outgoing(request):
             products = request.POST.getlist('products')  # Checkboxda tanlangan mahsulotlar
             recipient = form.cleaned_data['recipient']
             quantities = {}
+            prices = {}
 
             for product_id in products:
                 quantity_key = f'quantity_{product_id}'
+                price_key = f'price_{product_id}'
                 quantity_value = request.POST.get(quantity_key)
+                price_value = request.POST.get(price_key)
 
-                if quantity_value:
+                if quantity_value and price_value:
                     try:
                         quantity = int(quantity_value)
-                        if quantity > 0:
+                        price = float(price_value)
+                        if quantity > 0 and price > 0:
                             quantities[int(product_id)] = quantity
+                            prices[int(product_id)] = price
                         else:
-                            form.add_error(None, "Miqdor 0 dan katta bo‘lishi kerak!")
+                            form.add_error(None, "Miqdor va narx 0 dan katta bo‘lishi kerak!")
                     except ValueError:
-                        form.add_error(None, "Miqdor noto‘g‘ri formatda!")
+                        form.add_error(None, "Miqdor yoki narx noto‘g‘ri formatda!")
 
             if len(products) != len(quantities):
-                form.add_error(None, "Har bir mahsulot uchun miqdor kiritilishi shart!")
+                form.add_error(None, "Har bir mahsulot uchun miqdor va narx kiritilishi shart!")
             else:
                 for product_id, quantity in quantities.items():
                     product = Product.objects.get(id=product_id)
@@ -167,23 +356,37 @@ def bulk_outgoing(request):
                 if not form.errors:
                     for product_id, quantity in quantities.items():
                         product = Product.objects.get(id=product_id)
-                        product.quantity -= quantity
-                        product.save()
+                        total_sum = quantity * prices[product_id]
 
-                        Transaction.objects.create(
-                            product=product,
-                            transaction_type='outgoing',
-                            quantity=quantity,
-                            person=recipient
-                        )
+                        if product.total_price < total_sum:
+                            form.add_error(None, f"{product.name} uchun omborda yetarli mablag‘ yo‘q!")
+                            break
 
-                    messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
-                    return redirect('dashboard')
+                    if not form.errors:
+                        for product_id, quantity in quantities.items():
+                            product = Product.objects.get(id=product_id)
+                            total_sum = quantity * prices[product_id]
+
+                            product.quantity -= int(quantity)
+                            product.total_price -= int(total_sum) # Total summani kamaytirish
+                            product.save()
+
+                            Transaction.objects.create(
+                                product=product,
+                                transaction_type='outgoing',
+                                quantity=quantity,
+                                person=recipient,
+                                total_sum=total_sum  # Chiqim summasi
+                            )
+
+                        messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
+                        return redirect('dashboard')
 
     else:
         form = BulkOutgoingForm()
 
     return render(request, 'bulk_outgoing.html', {'form': form})
+
 
 def outgoing_list(request):
     incoming_transactions = Transaction.objects.filter(transaction_type='outgoing')

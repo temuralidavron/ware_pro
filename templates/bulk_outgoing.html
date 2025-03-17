@@ -1,94 +1,129 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2 class="text-center">Umumiy Chiqim</h2>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10 col-sm-12">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white text-center py-3">
+                    <h4 class="mb-0">📦 Umumiy Chiqim</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
 
-<form method="post">
-    {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="recipient" class="form-label fw-bold">Kimga chiqarildi:</label>
+                            {{ form.recipient }}
+                        </div>
 
-    <div class="mb-3">
-        <label for="recipient">Kimga chiqarildi:</label>
-        {{ form.recipient }}
-    </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Chiqim qilinadigan mahsulotlar:</label>
+                            <input type="text" id="search" class="form-control mb-3" placeholder="🔍 Mahsulot qidiring...">
+                            <div id="product-list">
+                                {% for product in form.products.field.queryset %}
+                                <div class="product-item">
+                                    <div class="d-flex align-items-center">
+                                        <input type="checkbox" name="products" value="{{ product.id }}" id="product_{{ product.id }}"
+                                               class="form-check-input me-2" onchange="toggleQuantityAndPrice({{ product.id }}, {{ product.quantity }}, {{ product.last_price }})">
+                                        <label for="product_{{ product.id }}" class="product-label fw-bold">{{ product.name }}</label>
+                                    </div>
 
-    <div class="mb-3">
-        <label>Chiqim qilinadigan mahsulotlar:</label>
-        <div id="product-list">
-            {% for product in form.products.field.queryset %}
-            <div class="product-item">
-                <input type="checkbox" name="products" value="{{ product.id }}" id="product_{{ product.id }}"
-                       onchange="toggleQuantity({{ product.id }}, {{ product.quantity }})">
+                                    <div class="stock-info">
+                                        Omborda: <strong>{{ product.quantity }}</strong> | Oxirgi narx: <strong>{{ product.price }} UZS</strong>
+                                    </div>
 
-                <label for="product_{{ product.id }}" class="product-label">{{ product.name }}</label>
+                                    <div class="quantity-price">
+                                        <input type="number" name="quantity_{{ product.id }}" id="quantity_{{ product.id }}"
+                                               class="form-control quantity-input" placeholder="Miqdor" min="1" max="{{ product.quantity }}" style="display: none;">
 
-                <!-- Ombordagi mavjud miqdor -->
-                <span class="stock-info">Omborda: <strong>{{ product.quantity }}</strong></span>
+                                        <input type="number" name="price_{{ product.id }}" id="price_{{ product.id }}"
+                                               class="form-control price-input" placeholder="Narx (UZS)" min="1" style="display: none;">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
 
-                <!-- Foydalanuvchi kiritadigan miqdor -->
-                <input type="number" name="quantity_{{ product.id }}" id="quantity_{{ product.id }}"
-                       class="form-control quantity-input" placeholder="Miqdor" min="1" max="{{ product.quantity }}"
-                       style="display: none;">
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" class="btn btn-secondary" onclick="goBack()">⬅️ Ortga</button>
+                            <button type="submit" class="btn btn-success">✅ Yuborish</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            {% endfor %}
         </div>
     </div>
-
-    <div class="d-flex justify-content-between mt-3">
-        <button type="button" class="btn btn-secondary" onclick="goBack()">⬅️ Ortga</button>
-        <button type="submit" class="btn btn-primary">Yuborish ✅</button>
-    </div>
-</form>
+</div>
 
 <script>
-    function toggleQuantity(productId, stockQuantity) {
+    function toggleQuantityAndPrice(productId, stockQuantity, lastPrice) {
         let checkbox = document.getElementById("product_" + productId);
         let quantityInput = document.getElementById("quantity_" + productId);
+        let priceInput = document.getElementById("price_" + productId);
 
         if (checkbox.checked) {
             quantityInput.style.display = "block";
+            priceInput.style.display = "block";
             quantityInput.setAttribute("required", "required");
-            quantityInput.setAttribute("max", stockQuantity);  // Omborda bor miqdordan oshirib bo‘lmaydi
+            priceInput.setAttribute("required", "required");
+            quantityInput.setAttribute("max", stockQuantity);
+            priceInput.value = lastPrice || "";
         } else {
             quantityInput.style.display = "none";
+            priceInput.style.display = "none";
             quantityInput.removeAttribute("required");
+            priceInput.removeAttribute("required");
             quantityInput.value = "";
+            priceInput.value = "";
         }
     }
 
     function goBack() {
         window.history.back();
     }
+
+    document.getElementById("search").addEventListener("input", function () {
+        let filter = this.value.toLowerCase();
+        let items = document.querySelectorAll(".product-item");
+
+        items.forEach(item => {
+            let text = item.textContent.toLowerCase();
+            item.style.display = text.includes(filter) ? "block" : "none";
+        });
+    });
 </script>
 
 <style>
+    input, select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+    }
     .product-item {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        padding: 10px;
+        flex-direction: column;
+        padding: 12px;
         border: 1px solid #ddd;
-        border-radius: 8px;
+        border-radius: 10px;
         background-color: #f9f9f9;
+        margin-bottom: 10px;
     }
-
-    .product-label {
-        flex-grow: 1;
-        margin-left: 10px;
-    }
-
     .stock-info {
         font-size: 14px;
         color: #555;
-        margin-right: 15px;
+        margin-top: 5px;
     }
-
-    .quantity-input {
-        width: 120px;
-        padding: 8px;
-        font-size: 16px;
-        border-radius: 5px;
+    .quantity-price {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+    }
+    .quantity-input, .price-input {
+        flex: 1;
+        display: block;
     }
 </style>
-
 {% endblock %}

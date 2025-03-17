@@ -24,25 +24,24 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqt")  # Qo‘shildi
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Yangilangan vaqt")  # Qo‘shildi
     contract_number = models.CharField(max_length=255, verbose_name="Shartnoma raqami",default=0)  # 🔥 Qo‘shildi
+    total_price = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)  # Qo‘shilgan maydon
 
     def save(self, *args, **kwargs):
-        """ Mahsulot saqlanganda tranzaksiya ham yaratiladi """
-        is_new = self.pk is None  # 🔥 Mahsulot yangi yaratilayotganini tekshiramiz
-        super().save(*args, **kwargs)  # Asosiy saqlash
+        is_new = self.pk is None  # Ob'ekt yangi yaratilayaptimi yoki yo‘q?
 
-        if is_new:  # Faqat yangi mahsulot qo‘shilganda ishlaydi
-            Transaction.objects.create(
-                product=self,
-                transaction_type='incoming',  # Kirim tranzaksiya
-                quantity=self.quantity,
-                person=self.supplier,
-                contract_number=self.contract_number,  # 🔥 Majburiy maydon
-                total_sum=self.quantity * self.price
-            )
+        super().save(*args, **kwargs)  # **Asosiy saqlashni bajaramiz**
 
+        # ✅ **Har safar yangi Transaction yaratamiz**
+        Transaction.objects.create(
+            product=self,
+            transaction_type='incoming',
+            quantity=self.quantity,
+            person=self.supplier,
+            contract_number=self.contract_number,
+            total_sum=self.total_price
+        )
     def __str__(self):
         return self.name
-
 
 class Transaction(models.Model):
     TRANSACTION_TYPES = [
@@ -69,3 +68,4 @@ class Transaction(models.Model):
 
 class Proba(models.Model):
     name = models.CharField(max_length=50)
+

@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container">
-    <h2 class="text-center my-4">📊 Dashboard</h2>
+    <h2 class="text-center my-4">📊 Dashboard<br>Gösterge Paneli</h2>
 
     <div class="row g-4">
         <div class="col-lg-3 col-md-6">
@@ -12,7 +12,7 @@
                 <div class="card text-white bg-primary shadow-lg">
                     <div class="card-body text-center">
                         <i class="fas fa-box fa-3x mb-2"></i>
-                        <h5 class="card-title">Umumiy Mahsulotlar</h5>
+                        <h5 class="card-title">Umumiy Mahsulotlar<br> Tüm ürünler</h5>
                         <h3 class="fw-bold">{{ total_products }}</h3>
                     </div>
                 </div>
@@ -24,7 +24,7 @@
                 <div class="card text-white bg-success shadow-lg">
                     <div class="card-body text-center">
                         <i class="fas fa-arrow-down fa-3x mb-2"></i>
-                        <h5 class="card-title">Umumiy Kirim</h5>
+                        <h5 class="card-title">Umumiy Kirim <br> Giriş</h5>
                         <h3 class="fw-bold">{{ total_incoming }}</h3>
                     </div>
                 </div>
@@ -36,7 +36,7 @@
                 <div class="card text-white bg-danger shadow-lg">
                     <div class="card-body text-center">
                         <i class="fas fa-arrow-up fa-3x mb-2"></i>
-                        <h5 class="card-title">Umumiy Chiqim</h5>
+                        <h5 class="card-title">Umumiy Chiqim <br> Çıkış</h5>
                         <h3 class="fw-bold">{{ total_outgoing }}</h3>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
                 <div class="card text-white bg-info shadow-lg">
                     <div class="card-body text-center">
                         <i class="fas fa-chart-bar fa-3x mb-2"></i>
-                        <h5 class="card-title">📊 Oylik Hisobot</h5>
+                        <h5 class="card-title">📊 Oylik Hisobot<br>Aylık Hesap</h5>
                         <h3 class="fw-bold">Ko‘rish</h3>
                     </div>
                 </div>
@@ -58,7 +58,7 @@
 
     <!-- 🔥 Statistik Diagramma -->
     <div class="mt-5">
-        <h3 class="text-center">📊 Mahsulotlar statistikasi</h3>
+        <h3 class="text-center">📊 Mahsulotlar statistikasi<br>Ürün İstatistikleri</h3>
         <canvas id="productChart" width="400" height="200"></canvas>
     </div>
 </div>
