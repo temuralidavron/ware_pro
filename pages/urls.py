@@ -15,7 +15,7 @@ urlpatterns = [
     path('warehouse-report/', warehouse_report, name='warehouse_report'),
     path('dashboard/', dashboard_view, name='dashboard'),
     path('chiqimlar/excel/', export_outgoing_to_excel, name='export_outgoing_to_excel'),
-    path('', user_login, name='login'),
+    path('login/', user_login, name='login'),
     path('register/', user_register, name='register'),
     path("logout/", user_logout, name="logout"),
 

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Mahsulotlar Ro'yxati{% endblock %}
 
@@ -26,8 +27,8 @@
             <td>{{ product.quantity }}</td>
             <td>{{ product.price }}</td>
             <td>{{ product.unit }}</td>
-            <td><b>{{ product.total_price|floatformat:2 }}</b></td>  {# 🔥 Jami summa backenddan kelmoqda #}
-            <td>{{ product.created_at|date:"Y-m-d H:i" }}</td>
+            <td><b>{{ product.total_price|floatformat:0|intcomma  }}</b></td>  {# 🔥 Jami summa backenddan kelmoqda #}
+            <td>{{ product.created_at|date:"d F Y H:i" }}</td>
             <td>
                 <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">✏️ Yangilash</a>
             </td>

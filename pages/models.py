@@ -9,6 +9,7 @@ class MeasurementUnit(models.TextChoices):
     ORAM = 'oram', 'O‘ram'
     QOP = 'qop', 'Qop'
     QUTI = 'quti', 'Quti'
+    GRAMM='gramm','Gramm'
 
 class Product(models.Model):
     name = models.CharField(max_length=255, unique=True, verbose_name="Mahsulot nomi")

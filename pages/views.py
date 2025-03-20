@@ -14,7 +14,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.contrib import messages
 
-def custom_404(request, exception=None):
+def custom_404_view(request, exception):
     return render(request, '404.html', status=404)
 
 from django.contrib.auth.decorators import login_required
