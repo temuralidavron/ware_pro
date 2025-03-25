@@ -66,6 +66,13 @@
                     <li class="nav-item">
                         <a class="nav-link text-white" href="#">Kirimlar</a>
                     </li>
+                     {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a href="{% url 'logout' %}" class="nav-link text-white">
+                            <i class="fas fa-sign-out-alt"></i> Chiqish
+                        </a>
+                    </li>
+                {% endif %}
                 </ul>
             </div>
         </div>

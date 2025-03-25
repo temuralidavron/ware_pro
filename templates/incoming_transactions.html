@@ -27,8 +27,8 @@
             <tr class="{% cycle 'table-light' 'table-secondary' %}">
                 <td>{{ forloop.counter }}</td>
                 <td>{{ transaction.product.name }}</td>
-                <td>{{ transaction.quantity }} {{ transaction.product.unit }}</td>
-                <td><b>{{ transaction.total_price|floatformat:0|intcomma   }}</b></td>  {# 🔥 Faqat `total_price` ni chaqirdik #}
+                <td><b>{{ transaction.quantity|floatformat:"-1"|intcomma }}</b> {{ transaction.product.unit }}</td>
+                <td><b>{{ transaction.total_price|floatformat:"-1"|intcomma }}</b></td>
                 <td>{{ transaction.person }}</td>
                 <td>{{ transaction.created_at|date:"d F Y H:i" }}</td>
             </tr>

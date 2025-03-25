@@ -6,6 +6,11 @@
 {% block content %}
 <h2 class="text-center my-4">📦 Barcha Mahsulotlar</h2>
 
+<!-- Qidiruv inputi -->
+<div class="mb-3">
+    <input type="text" id="search" class="form-control" placeholder="🔍 Mahsulot nomi bo'yicha qidiring...">
+</div>
+
 <table class="table table-bordered text-center shadow">
     <thead class="bg-primary text-white">
         <tr>
@@ -19,15 +24,15 @@
             <th>✏️ Yangilash</th>
         </tr>
     </thead>
-    <tbody>
+    <tbody id="product-table">
         {% for product in page_obj %}
-        <tr class="{% cycle 'table-light' 'table-secondary' %}">
+        <tr class="product-row {% cycle 'table-light' 'table-secondary' %}">
             <td>{{ forloop.counter }}</td>
-            <td>{{ product.name }}</td>
-            <td>{{ product.quantity|floatformat:"-1" }}</td>
-            <td>{{ product.price|floatformat:"-1" }}</td>
+            <td class="product-name">{{ product.name }}</td>
+            <td><b>{{ product.quantity|floatformat:"-1"|intcomma }}</b></td>
+            <td><b>{{ product.price|floatformat:"-1"|intcomma }}</b></td>
             <td>{{ product.unit }}</td>
-            <td><b>{{ product.total_price|floatformat:0|intcomma  }}</b></td>  {# 🔥 Jami summa backenddan kelmoqda #}
+            <td><b>{{ product.total_price|floatformat:0|intcomma  }}</b></td>
             <td>{{ product.created_at|date:"d F Y H:i" }}</td>
             <td>
                 <a href="{% url 'update_product' product.id %}" class="btn btn-warning btn-sm">✏️ Yangilash</a>
@@ -76,5 +81,17 @@
         {% endif %}
     </ul>
 </nav>
+
+<script>
+    document.getElementById("search").addEventListener("input", function () {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll(".product-row");
+
+        rows.forEach(row => {
+            let productName = row.querySelector(".product-name").textContent.toLowerCase();
+            row.style.display = productName.includes(filter) ? "table-row" : "none";
+        });
+    });
+</script>
 
 {% endblock %}
