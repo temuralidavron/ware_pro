@@ -462,79 +462,176 @@ def update_product(request, product_id):
 
 from decimal import Decimal
 
+# def bulk_outgoing(request):
+#     if request.method == "POST":
+#         form = BulkOutgoingForm(request.POST)
+#         if form.is_valid():
+#             products = request.POST.getlist('products')  # Checkboxda tanlangan mahsulotlar
+#             recipient = form.cleaned_data['recipient']
+#             quantities = {}
+#             prices = {}
+#
+#             for product_id in products:
+#                 quantity_key = f'quantity_{product_id}'
+#                 price_key = f'price_{product_id}'
+#                 quantity_value = request.POST.get(quantity_key)
+#                 price_value = request.POST.get(price_key)
+#
+#                 if quantity_value and price_value:
+#                     try:
+#                         # ✅ Float emas, to‘g‘ridan-to‘g‘ri Decimal ishlatamiz
+#                         quantity = Decimal(str(quantity_value))
+#                         price = Decimal(str(price_value))
+#
+#                         if quantity > 0 and price > 0:
+#                             quantities[int(product_id)] = quantity
+#                             prices[int(product_id)] = price
+#                         else:
+#                             form.add_error(None, "Miqdor va narx 0 dan katta bo‘lishi kerak!")
+#                     except ValueError:
+#                         form.add_error(None, "Miqdor yoki narx noto‘g‘ri formatda!")
+#
+#             if len(products) != len(quantities):
+#                 form.add_error(None, "Har bir mahsulot uchun miqdor va narx kiritilishi shart!")
+#             else:
+#                 products_data = {p.id: p for p in Product.objects.filter(id__in=quantities.keys())}
+#
+#                 for product_id, quantity in quantities.items():
+#                     product = products_data[product_id]
+#                     if product.quantity < quantity:
+#                         form.add_error(None, f"{product.name} uchun omborda yetarli mahsulot yo‘q!")
+#                         break
+#
+#                 if not form.errors:
+#                     for product_id, quantity in quantities.items():
+#                         product = products_data[product_id]
+#                         total_sum = quantity * prices[product_id]  # ✅ Endi ikkisi ham Decimal
+#
+#                         if product.total_price < total_sum:
+#                             form.add_error(None, f"{product.name} uchun omborda yetarli mablag‘ yo‘q!")
+#                             break
+#
+#                     if not form.errors:
+#                         for product_id, quantity in quantities.items():
+#                             product = products_data[product_id]
+#                             total_sum = quantity * prices[product_id]  # ✅ Ikkisi ham Decimal
+#
+#                             print(f"Product: {product.name}, total_price: {product.total_price}, total_sum: {total_sum}")  # 🛠 Debug
+#
+#                             product.quantity -= quantity
+#                             product.total_price -= total_sum
+#                             product.save()
+#
+#                             Transaction.objects.create(
+#                                 product=product,
+#                                 transaction_type='outgoing',
+#                                 quantity=quantity,
+#                                 person=recipient,
+#                                 total_sum=total_sum
+#                             )
+#
+#                         messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
+#                         return redirect('dashboard')
+#
+#     else:
+#         form = BulkOutgoingForm()
+#     print(request.POST)  # 🛠 Debug qilish uchun
+#
+#     return render(request, 'bulk_outgoing.html', {'form': form})
+
+from decimal import Decimal
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import Product, Transaction
+from .forms import BulkOutgoingForm
+
 def bulk_outgoing(request):
     if request.method == "POST":
         form = BulkOutgoingForm(request.POST)
+
         if form.is_valid():
-            products = request.POST.getlist('products')  # Checkboxda tanlangan mahsulotlar
+            products = request.POST.getlist('products')  # ✅ Tanlangan mahsulotlar IDlari
             recipient = form.cleaned_data['recipient']
-            quantities = {}
-            prices = {}
+            quantities, prices = {}, {}
 
+            # 🔹 Mahsulot miqdori va narxini to‘plash
             for product_id in products:
-                quantity_key = f'quantity_{product_id}'
-                price_key = f'price_{product_id}'
-                quantity_value = request.POST.get(quantity_key)
-                price_value = request.POST.get(price_key)
+                quantity = request.POST.get(f'quantity_{product_id}')
+                price = request.POST.get(f'price_{product_id}', '0')  # ✅ Agar yo‘q bo‘lsa, '0' bo‘lsin
 
-                if quantity_value and price_value:
-                    try:
-                        # ✅ Float emas, to‘g‘ridan-to‘g‘ri Decimal ishlatamiz
-                        quantity = Decimal(str(quantity_value))
-                        price = Decimal(str(price_value))
+                if not quantity:
+                    form.add_error(None, "Har bir mahsulot uchun miqdor kiritilishi shart!")
+                    continue
 
-                        if quantity > 0 and price > 0:
-                            quantities[int(product_id)] = quantity
-                            prices[int(product_id)] = price
-                        else:
-                            form.add_error(None, "Miqdor va narx 0 dan katta bo‘lishi kerak!")
-                    except ValueError:
-                        form.add_error(None, "Miqdor yoki narx noto‘g‘ri formatda!")
+                try:
+                    quantity = Decimal(quantity)
+                    price = Decimal(price) if price not in [None, ''] else Decimal(0)  # ✅ None bo‘lsa, 0 qilish
 
-            if len(products) != len(quantities):
-                form.add_error(None, "Har bir mahsulot uchun miqdor va narx kiritilishi shart!")
-            else:
-                products_data = {p.id: p for p in Product.objects.filter(id__in=quantities.keys())}
+                    if quantity <= 0:
+                        form.add_error(None, "Miqdor 0 dan katta bo‘lishi kerak!")
+                        continue
 
-                for product_id, quantity in quantities.items():
-                    product = products_data[product_id]
-                    if product.quantity < quantity:
-                        form.add_error(None, f"{product.name} uchun omborda yetarli mahsulot yo‘q!")
-                        break
+                    quantities[int(product_id)] = quantity
+                    prices[int(product_id)] = price
 
-                if not form.errors:
-                    for product_id, quantity in quantities.items():
-                        product = products_data[product_id]
-                        total_sum = quantity * prices[product_id]  # ✅ Endi ikkisi ham Decimal
+                except ValueError:
+                    form.add_error(None, "Miqdor yoki narx noto‘g‘ri formatda!")
 
-                        if product.total_price < total_sum:
-                            form.add_error(None, f"{product.name} uchun omborda yetarli mablag‘ yo‘q!")
-                            break
+            # 🔹 Agar xatolik bo‘lsa, qaytariladi
+            if form.errors:
+                return render(request, 'bulk_outgoing.html', {'form': form})
 
-                    if not form.errors:
-                        for product_id, quantity in quantities.items():
-                            product = products_data[product_id]
-                            total_sum = quantity * prices[product_id]  # ✅ Ikkisi ham Decimal
+            # 🔹 Mahsulotlar bazadan olinadi
+            products_data = {p.id: p for p in Product.objects.filter(id__in=quantities.keys())}
 
-                            product.quantity -= quantity
-                            product.total_price -= total_sum
-                            product.save()
+            # 🔹 Omborda yetarli mahsulot borligini tekshirish
+            for product_id, quantity in quantities.items():
+                product = products_data.get(product_id)
+                if not product:
+                    form.add_error(None, f"Mahsulot (ID: {product_id}) topilmadi!")
+                    continue
 
-                            Transaction.objects.create(
-                                product=product,
-                                transaction_type='outgoing',
-                                quantity=quantity,
-                                person=recipient,
-                                total_sum=total_sum
-                            )
+                if product.quantity < quantity:
+                    form.add_error(None, f"{product.name} uchun omborda yetarli mahsulot yo‘q!")
+                    continue
 
-                        messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
-                        return redirect('dashboard')
+            # 🔹 Agar xatolik bo‘lsa, yana qaytariladi
+            if form.errors:
+                return render(request, 'bulk_outgoing.html', {'form': form})
+
+            # 🔹 Ombordan mahsulotlarni chiqarish
+            for product_id, quantity in quantities.items():
+                product = products_data[product_id]
+                price = prices.get(product_id, Decimal(0))  # ✅ Agar `price` None bo‘lsa, 0 qilib olish
+
+                total_sum = quantity * price if price > 0 else Decimal(0)  # ✅ Endi hech qachon None bo‘lmaydi
+
+                product.quantity -= quantity
+
+                # 🔹 Faqat `price > 0` bo‘lsa, `total_price` kamayadi
+                if product.price and product.price > 0:  # ✅ `None` bo‘lish ehtimoli yo‘q qilindi
+                    product.total_price -= total_sum
+
+                product.save()
+
+                Transaction.objects.create(
+                    product=product,
+                    transaction_type='outgoing',
+                    quantity=quantity,
+                    person=recipient,
+                    total_sum=total_sum  # ✅ price 0 bo‘lsa ham ishlaydi
+                )
+
+            messages.success(request, "Umumiy chiqim muvaffaqiyatli bajarildi!")
+            return redirect('dashboard')
 
     else:
         form = BulkOutgoingForm()
 
     return render(request, 'bulk_outgoing.html', {'form': form})
+
+
+
 
 def outgoing_list(request):
     incoming_transactions = Transaction.objects.filter(transaction_type='outgoing')

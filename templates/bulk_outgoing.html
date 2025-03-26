@@ -39,7 +39,7 @@
                                                class="form-control quantity-input" placeholder="Miqdor" min="0.1" step="0.1" max="{{ product.quantity }}" style="display: none;">
 
                                         <input type="number" name="price_{{ product.id }}" id="price_{{ product.id }}"
-                                               class="form-control price-input" placeholder="Narx (UZS)" min="1" style="display: none;">
+                                               class="form-control price-input" placeholder="Narx (UZS)" min="0" style="display: none;">
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -69,7 +69,8 @@
             quantityInput.setAttribute("required", "required");
             priceInput.setAttribute("required", "required");
             quantityInput.setAttribute("max", stockQuantity);
-            priceInput.value = lastPrice || "";
+            priceInput.setAttribute("min", "0");  // 0 ga ruxsat berildi
+            priceInput.value = lastPrice || 0; // Agar qiymat yo‘q bo‘lsa, 0 qo‘yiladi
         } else {
             quantityInput.style.display = "none";
             priceInput.style.display = "none";

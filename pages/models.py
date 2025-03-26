@@ -26,14 +26,18 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqt")  # Qo‘shildi
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Yangilangan vaqt")  # Qo‘shildi
     contract_number = models.CharField(max_length=255, verbose_name="Shartnoma raqami",default=0)  # 🔥 Qo‘shildi
-    total_price = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
+    total_price = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
 
     def save(self, *args, **kwargs):
+        # ✅ Agar total_price None bo‘lsa, uni hisoblab chiqamiz
+        if self.total_price is None:
+            self.total_price = self.price * self.quantity
+
         is_new = self.pk is None  # Ob'ekt yangi yaratilayaptimi yoki yo‘q?
 
         super().save(*args, **kwargs)  # **Asosiy saqlashni bajaramiz**
 
-        # ✅ **Har safar yangi Transaction yaratamiz**
+        # ✅ Har safar yangi Transaction yaratamiz
         Transaction.objects.create(
             product=self,
             transaction_type='incoming',
